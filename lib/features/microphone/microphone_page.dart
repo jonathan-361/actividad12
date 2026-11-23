@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../../core/app_toast.dart';
+import '../../widgets/audio_player_tile.dart';
 import '../../widgets/permission_gate.dart';
 
 class MicrophonePage extends StatelessWidget {
@@ -30,8 +31,8 @@ class _MicrophoneContent extends StatefulWidget {
 
 class _MicrophoneContentState extends State<_MicrophoneContent> {
   final _recorder = AudioRecorder();
+  final List<String> _recordings = [];
   bool _isRecording = false;
-  String? _lastPath;
 
   @override
   void dispose() {
@@ -44,7 +45,7 @@ class _MicrophoneContentState extends State<_MicrophoneContent> {
       final path = await _recorder.stop();
       setState(() {
         _isRecording = false;
-        _lastPath = path;
+        if (path != null) _recordings.insert(0, path); // la más nueva arriba
       });
       AppToast.show('Grabación guardada');
       return;
@@ -61,33 +62,48 @@ class _MicrophoneContentState extends State<_MicrophoneContent> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _isRecording ? Icons.graphic_eq : Icons.mic,
-              size: 96,
-              color: _isRecording ? Colors.red : theme.colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(_isRecording ? 'Grabando...' : 'Listo para grabar'),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _toggleRecording,
-              icon: Icon(_isRecording ? Icons.stop : Icons.fiber_manual_record),
-              label: Text(_isRecording ? 'Detener' : 'Grabar'),
-            ),
-            if (_lastPath != null) ...[
-              const SizedBox(height: 24),
-              Text('Último audio:', style: theme.textTheme.labelLarge),
-              Text(_lastPath!, textAlign: TextAlign.center),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Icon(
+                _isRecording ? Icons.graphic_eq : Icons.mic,
+                size: 72,
+                color: _isRecording ? Colors.red : theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 8),
+              Text(_isRecording ? 'Grabando...' : 'Listo para grabar'),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _toggleRecording,
+                icon: Icon(
+                  _isRecording ? Icons.stop : Icons.fiber_manual_record,
+                ),
+                label: Text(_isRecording ? 'Detener' : 'Grabar'),
+              ),
             ],
-          ],
+          ),
         ),
-      ),
+        const Divider(height: 1),
+        Expanded(
+          child: _recordings.isEmpty
+              ? const Center(child: Text('Aún no hay grabaciones'))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _recordings.length,
+                  itemBuilder: (context, index) {
+                    final path = _recordings[index];
+                    return AudioPlayerTile(
+                      key: ValueKey(path),
+                      path: path,
+                      title: 'Grabación ${_recordings.length - index}',
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
